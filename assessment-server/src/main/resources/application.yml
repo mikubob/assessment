@@ -1,0 +1,220 @@
+server:
+  port: ${SERVER_PORT:9706}
+  servlet:
+    context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  shutdown: graceful
+  forward-headers-strategy: none
+  tomcat:
+    connection-timeout: 10s
+    max-http-form-post-size: 2MB
+
+spring:
+  application:
+    name: assessment-device
+  profiles:
+    default: dev
+    group:
+      prd: [prod]
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  threads:
+    virtual:
+      enabled: false
+  main:
+    allow-bean-definition-overriding: false
+    allow-circular-references: false
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      initial-size: 0
+      min-idle: 0
+      max-active: 20
+      max-wait: 10000
+      validation-query: SELECT 1
+      validation-query-timeout: 3
+      test-on-borrow: false
+      test-on-return: false
+      test-while-idle: true
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      connection-properties: "connectTimeout=3000;socketTimeout=10000"
+      stat-view-servlet:
+        enabled: false
+      web-stat-filter:
+        enabled: false
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DATABASE:0}
+      username: ${REDIS_USERNAME:}
+      password: ${REDIS_PASSWORD:}
+      connect-timeout: 3s
+      timeout: 3s
+      repositories:
+        enabled: false
+  cache:
+    type: redis
+    redis:
+      time-to-live: 15m
+      cache-null-values: false
+      use-key-prefix: true
+      key-prefix: "assessment:device-v3:"
+  jackson:
+    time-zone: Asia/Shanghai
+    date-format: yyyy-MM-dd HH:mm:ss
+    serialization:
+      write-dates-as-timestamps: false
+      write-durations-as-timestamps: false
+  mvc:
+    async:
+      request-timeout: 30s
+  servlet:
+    multipart:
+      enabled: false
+  task:
+    execution:
+      pool:
+        core-size: 4
+        max-size: 16
+        queue-capacity: 100
+      thread-name-prefix: device-async-
+      shutdown:
+        await-termination: true
+        await-termination-period: 20s
+    scheduling:
+      pool:
+        size: 2
+      thread-name-prefix: device-scheduled-
+      shutdown:
+        await-termination: true
+        await-termination-period: 20s
+  quartz:
+    job-store-type: memory
+    auto-startup: false
+    wait-for-jobs-to-complete-on-shutdown: true
+    overwrite-existing-jobs: false
+    properties:
+      org.quartz.scheduler.instanceName: assessment-device
+      org.quartz.threadPool.threadCount: 4
+      org.quartz.jobStore.misfireThreshold: 60000
+    jdbc:
+      initialize-schema: never
+  sql:
+    init:
+      mode: never
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.hnkjzyxy.ab.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    default-statement-timeout: 10
+    jdbc-type-for-null: NULL
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto
+      # 仅对实体显式 @TableLogic 生效；业务 status 字段不全局绑定逻辑删除。
+      logic-not-delete-value: 1
+      logic-delete-value: 0
+
+absolute:
+  jwt:
+    header: ${JWT_HEADER:Authorization}
+    # 沿用原 JJWT 0.9.1 的 Base64 密钥语义，不是普通文本口令。
+    secret: ${JWT_SECRET:}
+    expire: ${JWT_EXPIRE_SECONDS:604800}
+    suffix: ${AUTH_REDIS_SUFFIX:}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+
+  identity:
+    jdbc-enabled: ${IDENTITY_JDBC_ENABLED:true}
+    query-timeout-seconds: 3
+  readiness:
+    schema-check-enabled: ${SCHEMA_CHECK_ENABLED:false}
+  jobs:
+    # 后续业务任务必须按相应开关有条件注册；此处不会注册任务。
+    exam-refresh-enabled: ${EXAM_REFRESH_ENABLED:false}
+    exam-refresh-interval: 15s
+    lock-reconcile-enabled: ${LOCK_RECONCILE_ENABLED:false}
+    lock-reconcile-interval: 60s
+    command-expiry-enabled: ${COMMAND_EXPIRY_ENABLED:false}
+    command-expiry-interval: 60s
+
+oa:
+  enabled: ${OA_ENABLED:false}
+  base-url: ${OA_BASE_URL:https://dmp.hnkjxy.net.cn}
+  app-key: ${OA_APP_KEY:}
+  app-secret: ${OA_APP_SECRET:}
+  connect-timeout: 10000
+  read-timeout: 30000
+  token-cache-seconds: 3300
+  page-size: 1000
+
+schedule:
+  sync:
+    enabled: ${SCHEDULE_SYNC_ENABLED:false}
+    sync-on-startup: ${SCHEDULE_SYNC_ON_STARTUP:false}
+    cron: "0 0 3 * * ?"
+    batch-size: 500
+    min-rows: 50
+    shrink-guard-ratio: 0.5
+    page-size: 1000
+    lock-ttl-seconds: 1800
+
+school:
+  schedule:
+    zone-id: Asia/Shanghai
+    version: legacy-pairs-v1
+    snapshot-ttl-seconds: 60
+    coverage-max-age-hours: 24
+    coverage-confirmed: false
+    campus-aliases: {}
+    # 只保留已知双节边界；未核实的单节边界不补造。
+    starts: {1: "08:20", 3: "10:15", 5: "14:00", 7: "15:55", 9: "17:50", 11: "19:55"}
+    ends: {2: "09:55", 4: "11:50", 6: "15:35", 8: "17:30", 10: "19:35", 12: "21:40"}
+
+smartlock:
+  enabled: ${SMARTLOCK_ENABLED:false}
+  shutdown-timeout: 10s
+  command-retries: 0
+  command-timeout: 30s
+  observation-ttl: 2m
+  receipt-expiry: 2m
+  reconcile-interval: 60s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState
+  health:
+    db:
+      enabled: true
+    redis:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.hnkjzyxy.ab: INFO
+  file:
+    path: ${LOG_PATH:./logs}
